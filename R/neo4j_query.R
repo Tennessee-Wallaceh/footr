@@ -1,13 +1,3 @@
-# Requirements
-#sudo apt-get install libcurl4-gnutls-dev # for RCurl on linux
-#install.packages('RCurl')
-#install.packages('RJSONIO')
-#install.packages("glue")
-#install.packages("config")
-
-library('RCurl')
-library('RJSONIO')
-
 footr_setup = function() {
   ip = Sys.getenv("FOOTR_NEO_IP")
   if (ip == "") {
@@ -27,9 +17,11 @@ footr_setup = function() {
 footr_config = footr_setup()
 
 neo_query <- function(query_string) {
-  h = basicTextGatherer()
+  Sys.sleep(0.5) # Wait for 0.5s as naive rate limit
+  
+  h = RCurl::basicTextGatherer()
 
-  auth_token = base64(glue::glue('{footr_config$username}:{footr_config$password}'))
+  auth_token = RCurl::base64Encode(glue::glue('{footr_config$username}:{footr_config$password}'))
   httpheader <- list(
     'Authorization'=glue::glue('Basic {auth_token}'),
     'Content-Type'='application/json'
@@ -37,19 +29,25 @@ neo_query <- function(query_string) {
 
   query_url = glue::glue('http://{footr_config$ip}:7474/db/neo4j/tx')
   
-  curlPerform(
+  RCurl::curlPerform(
     url=query_url,
     postfields=query_string,
     writefunction=h$update,
     httpheader=httpheader,
     verbose=FALSE
   )
+
+  response = h$value()
+
+  result <- RJSONIO::fromJSON(h$value())
   
-  result <- fromJSON(h$value())
-  
-  raw_data = result$results[[1]]$data
-  
-  return(raw_data)
+  if (length(result$errors) > 0) {
+    print('Received error response!')
+    print(response)
+  } else {
+    raw_data = result$results[[1]]$data
+    return(raw_data)
+  }
 }
 
 get_home_team = function(match_id) {
@@ -64,6 +62,14 @@ get_away_team = function(match_id) {
   return(raw[[1]]$row[[1]][[2]])
 }
 
+#' Get the home goals for a particular match, selected by match id
+#'
+#' @param match_id 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 get_home_goals = function(match_id) {
   query_string = glue::glue('{{"statements" : [ {{ "statement" : "MATCH (:Match {{uid: \'{match_id}\'})-[goal:GOAL]-(:Goal) WHERE goal.team_loc = \'H\' RETURN count(*)"}} ]}}')
   raw = neo_query(query_string)
@@ -76,15 +82,26 @@ get_away_goals = function(match_id) {
   return(raw[[1]]$row)
 }
 
+#' Get matches from the DB
+#'
+#' @param max_n The maximum number of games to return, for now limit set to NULL
+#'
+#' @return A data.frame of matches which matches query
+#' @export
+#'
+#' @examples
+#' get_matches(max_n=NULL) # get all matches
 get_matches = function(max_n=10) {
   query_string = '{"statements" : [ { "statement" : "MATCH (n:Match) RETURN n'
 
   if (is.null(max_n)) {
-    query_string = glue::glue('{query_string} LIMIT {max_n}"}} ]}}')
+    query_string = glue::glue('{query_string}"} ]}}')
   } else {
-    query_string = glue::glue('{query_string}} ]}}')
+    query_string = glue::glue('{query_string} LIMIT {max_n}"}} ]}}')
   }
-  print(query_string)
+  
+  print(glue::glue('Executing: {query_string}'))
+  
   raw_data = neo_query(query_string)
 
   n_matches = length(raw_data)
