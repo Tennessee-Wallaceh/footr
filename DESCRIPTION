@@ -1,0 +1,15 @@
+Package: footr 
+Type: Package
+Title: Access the FootDB 
+Version: 0.0.1
+Author: Tennessee Hickling
+Maintainer: Tennessee Hickling <tennessee.wallaceh@gmail.com>
+Description: An R wrapper for accessing FootDB 
+License: MIT + file LICENSE
+Encoding: UTF-8
+RoxygenNote: 6.1.1
+Imports:
+	RCurl
+	RJSONIO
+	glue
+	config
