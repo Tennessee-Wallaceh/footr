@@ -64,32 +64,51 @@ get_away_team = function(match_id) {
   return(raw[[1]]$row[[1]][[2]])
 }
 
-get_matches = function() {
-  query_string = '{"statements" : [ { "statement" : "MATCH (n:Match) RETURN n LIMIT 25"} ]}'
+get_home_goals = function(match_id) {
+  query_string = glue::glue('{{"statements" : [ {{ "statement" : "MATCH (:Match {{uid: \'{match_id}\'})-[goal:GOAL]-(:Goal) WHERE goal.team_loc = \'H\' RETURN count(*)"}} ]}}')
+  raw = neo_query(query_string)
+  return(raw[[1]]$row)
+}
+
+get_away_goals = function(match_id) {
+  query_string = glue::glue('{{"statements" : [ {{ "statement" : "MATCH (:Match {{uid: \'{match_id}\'})-[goal:GOAL]-(:Goal) WHERE goal.team_loc = \'A\' RETURN count(*)"}} ]}}')
+  raw = neo_query(query_string)
+  return(raw[[1]]$row)
+}
+
+get_matches = function(max_n=10) {
+  query_string = '{"statements" : [ { "statement" : "MATCH (n:Match) RETURN n'
+
+  if (is.null(max_n)) {
+    query_string = glue::glue('{query_string} LIMIT {max_n}"}} ]}}')
+  } else {
+    query_string = glue::glue('{query_string}} ]}}')
+  }
+  print(query_string)
   raw_data = neo_query(query_string)
-  raw_data = raw_data
-  
+
   n_matches = length(raw_data)
-  
+
   date = vector(mode="character", length=n_matches)
   home_team = vector(mode="character", length=n_matches)
   away_team = vector(mode="character", length=n_matches)
   home_goals = vector(mode="integer", length=n_matches)
   away_goals = vector(mode="integer", length=n_matches)
   result = vector(mode="character", length=n_matches)
-  
+
   for (match in 1:n_matches) {
     match_data = raw_data[[match]][[1]][[1]]
+    
+    match_id = match_data['uid']
+    date[match] = match_data['date']
 
-    date[match] = match_data$date
-    
-    home_team[match] = get_home_team(match_data$uid)
-    home_goals[match] = match_data$home_goals
-    
-    away_team[match] = get_away_team(match_data$uid)
-    away_goals[match] = match_data$away_goals
-    result[match] = match_data$result
+    home_team[match] = get_home_team(match_id)
+    home_goals[match] = get_home_goals(match_id)
+
+    away_team[match] = get_away_team(match_id)
+    away_goals[match] = get_away_goals(match_id)
+    result[match] = match_data['result']
   }
-  
+
   return(data.frame(date, home_team, home_goals, away_team, away_goals, result))
 }
