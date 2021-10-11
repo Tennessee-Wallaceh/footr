@@ -4,10 +4,10 @@ Title: Access the FootDB
 Version: 0.0.1
 Author: Tennessee Hickling
 Maintainer: Tennessee Hickling <tennessee.wallaceh@gmail.com>
-Description: An R wrapper for accessing FootDB 
+Description: An R wrapper for accessing FootDB. 
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.2
 Imports:
 	RCurl,
 	RJSONIO,
