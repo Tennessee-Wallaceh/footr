@@ -16,9 +16,14 @@ footr_setup = function() {
 
 footr_config = footr_setup()
 
-neo_query <- function(query_string) {
+neo_query <- function(cypher_query, verbose=FALSE) {
   Sys.sleep(0.5) # Wait for 0.5s as naive rate limit
   
+  if (verbose) {
+    print(glue::glue('Executing: {cypher_query}'))
+  }
+  
+  query_string = glue::glue('{{"statements" : [ {{ "statement" : "{cypher_query}"}} ]}}')
   h = RCurl::basicTextGatherer()
 
   auth_token = RCurl::base64Encode(glue::glue('{footr_config$username}:{footr_config$password}'))
@@ -51,14 +56,14 @@ neo_query <- function(query_string) {
 }
 
 get_home_team = function(match_id) {
-  query_string = glue::glue('{{"statements" : [ {{ "statement" : "MATCH (match:Match {{uid: \'{match_id}\'})-[:HOME_TEAM]-(home_team:Team) RETURN home_team"}} ]}}')
-  raw = neo_query(query_string)
+  cypher_query = glue::glue('MATCH (match:Match {{uid: \'{match_id}\'})-[:HOME_TEAM]-(home_team:Team) RETURN home_team')
+  raw = neo_query(cypher_query)
   return(raw[[1]]$row[[1]][[2]])
 }
 
 get_away_team = function(match_id) {
-  query_string = glue::glue('{{"statements" : [ {{ "statement" : "MATCH (match:Match {{uid: \'{match_id}\'})-[:AWAY_TEAM]-(away_team:Team) RETURN away_team"}} ]}}')
-  raw = neo_query(query_string)
+  cypher_query = glue::glue('MATCH (match:Match {{uid: \'{match_id}\'})-[:AWAY_TEAM]-(away_team:Team) RETURN away_team')
+  raw = neo_query(cypher_query)
   return(raw[[1]]$row[[1]][[2]])
 }
 
@@ -71,13 +76,13 @@ get_away_team = function(match_id) {
 #'
 #' @examples
 get_home_goals = function(match_id) {
-  query_string = glue::glue('{{"statements" : [ {{ "statement" : "MATCH (:Match {{uid: \'{match_id}\'})-[goal:GOAL]-(:Goal) WHERE goal.team_loc = \'H\' RETURN count(*)"}} ]}}')
-  raw = neo_query(query_string)
+  cypher_query = glue::glue('MATCH (:Match {{uid: \'{match_id}\'})-[goal:GOAL]-(:Goal) WHERE goal.team_loc = \'H\' RETURN count(*)')
+  raw = neo_query(cypher_query)
   return(raw[[1]]$row)
 }
 
 get_away_goals = function(match_id) {
-  query_string = glue::glue('{{"statements" : [ {{ "statement" : "MATCH (:Match {{uid: \'{match_id}\'})-[goal:GOAL]-(:Goal) WHERE goal.team_loc = \'A\' RETURN count(*)"}} ]}}')
+  query_string = glue::glue('MATCH (:Match {{uid: \'{match_id}\'})-[goal:GOAL]-(:Goal) WHERE goal.team_loc = \'A\' RETURN count(*)')
   raw = neo_query(query_string)
   return(raw[[1]]$row)
 }
@@ -92,17 +97,13 @@ get_away_goals = function(match_id) {
 #' @examples
 #' get_matches(max_n=NULL) # get all matches
 get_matches = function(max_n=10) {
-  query_string = '{"statements" : [ { "statement" : "MATCH (n:Match) RETURN n'
+  cypher_query = 'MATCH (match_node:Match) RETURN match_node'
 
-  if (is.null(max_n)) {
-    query_string = glue::glue('{query_string}"} ]}}')
-  } else {
-    query_string = glue::glue('{query_string} LIMIT {max_n}"}} ]}}')
+  if (!is.null(max_n)) {
+    cypher_query = glue::glue('{cypher_query} LIMIT {max_n}')
   }
   
-  print(glue::glue('Executing: {query_string}'))
-  
-  raw_data = neo_query(query_string)
+  raw_data = neo_query(cypher_query,  verbose=TRUE)
 
   n_matches = length(raw_data)
 
