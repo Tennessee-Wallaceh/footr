@@ -4,9 +4,13 @@
 \alias{get_matches}
 \title{Get matches from the DB}
 \usage{
-get_matches(expansions, team = NULL, max_n = 10)
+get_matches(expansions, date = NULL, team = NULL, max_n = 10)
 }
 \arguments{
+\item{expansions}{A list of wanted match expansions as defined in match_queries}
+
+\item{team}{A string name, if passed will return matches for only this team}
+
 \item{max_n}{The maximum number of games to return, for now limit set to NULL}
 }
 \value{
@@ -16,5 +20,7 @@ A data.frame of matches which matches query
 Get matches from the DB
 }
 \examples{
-get_matches(max_n=NULL) # get all matches
+basic_expansions = c('home_team', 'away_team', 'home_goals', 'away_goals')
+get_matches(basic_expansions, max_n=NULL) # get all matches
+get_matches(basic_expansions, team='Arsenal') # get Arsenal matches (max 10)
 }
