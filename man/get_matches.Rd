@@ -4,7 +4,7 @@
 \alias{get_matches}
 \title{Get matches from the DB}
 \usage{
-get_matches(max_n = 10)
+get_matches(expansions, max_n = 10)
 }
 \arguments{
 \item{max_n}{The maximum number of games to return, for now limit set to NULL}
