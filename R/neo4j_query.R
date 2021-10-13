@@ -99,16 +99,24 @@ neo_query <- function(cypher_query, verbose=FALSE) {
 }
 
 #' Get matches from the DB
-#'
+#' @param expansions A list of wanted match expansions as defined in match_queries
 #' @param max_n The maximum number of games to return, for now limit set to NULL
-#'
+#' @param team  A string name, if passed will return matches for only this team
 #' @return A data.frame of matches which matches query
 #' @export
 #'
 #' @examples
-#' get_matches(max_n=NULL) # get all matches
-get_matches = function(expansions, max_n=10) {
-  cypher_query = 'MATCH (match_node:Match) RETURN match_node'
+#' basic_expansions = c('home_team', 'away_team', 'home_goals', 'away_goals')
+#' get_matches(basic_expansions, max_n=NULL) # get all matches
+#' get_matches(basic_expansions, team='Arsenal') # get Arsenal matches (max 10)
+get_matches = function(expansions, team=NULL, max_n=10) {
+  cypher_query = 'MATCH (match_node:Match)'
+  
+  if(!is.null(team)) {
+    cypher_query = glue::glue('{cypher_query}-[:HOME_TEAM|AWAY_TEAM]-(team:Team) WHERE team.name = \'{team}\'')
+  }
+  
+  cypher_query = glue::glue('{cypher_query} RETURN match_node')
 
   if (!is.null(max_n)) {
     cypher_query = glue::glue('{cypher_query} LIMIT {max_n}')
