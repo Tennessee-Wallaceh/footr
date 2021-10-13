@@ -100,8 +100,9 @@ neo_query <- function(cypher_query, verbose=FALSE) {
 
 #' Get matches from the DB
 #' @param expansions A list of wanted match expansions as defined in match_queries
-#' @param max_n The maximum number of games to return, for now limit set to NULL
+#' @param date A tuple of from->to dates in format c('yyyy-mm-dd', 'yyyy-mm-dd'), filters matches inclusively
 #' @param team  A string name, if passed will return matches for only this team
+#' @param max_n The maximum number of games to return, for now limit set to NULL
 #' @return A data.frame of matches which matches query
 #' @export
 #'
@@ -109,11 +110,22 @@ neo_query <- function(cypher_query, verbose=FALSE) {
 #' basic_expansions = c('home_team', 'away_team', 'home_goals', 'away_goals')
 #' get_matches(basic_expansions, max_n=NULL) # get all matches
 #' get_matches(basic_expansions, team='Arsenal') # get Arsenal matches (max 10)
-get_matches = function(expansions, team=NULL, max_n=10) {
+get_matches = function(expansions, date=NULL, team=NULL, max_n=10) {
   cypher_query = 'MATCH (match_node:Match)'
   
   if(!is.null(team)) {
     cypher_query = glue::glue('{cypher_query}-[:HOME_TEAM|AWAY_TEAM]-(team:Team) WHERE team.name = \'{team}\'')
+  }
+  
+  if(!is.null(date)) {
+    start_date = date[1]
+    end_date = date[2]
+    date_condition = glue::glue('match_node.date > \'{start_date}\' AND match_node.date < \'{end_date}\'')
+    if(!is.null(team)) {
+      cypher_query = glue::glue('{cypher_query} AND {date_condition}')
+    } else {
+      cypher_query = glue::glue('{cypher_query} WHERE {date_condition}')
+    }
   }
   
   cypher_query = glue::glue('{cypher_query} RETURN match_node')
