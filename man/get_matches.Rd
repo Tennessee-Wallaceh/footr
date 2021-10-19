@@ -9,6 +9,8 @@ get_matches(expansions, date = NULL, team = NULL, max_n = 10)
 \arguments{
 \item{expansions}{A list of wanted match expansions as defined in match_queries}
 
+\item{date}{A tuple of from->to dates in format c('yyyy-mm-dd', 'yyyy-mm-dd'), filters matches inclusively}
+
 \item{team}{A string name, if passed will return matches for only this team}
 
 \item{max_n}{The maximum number of games to return, for now limit set to NULL}
