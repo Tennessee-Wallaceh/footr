@@ -1,31 +1,15 @@
 source('./R/match_queries.R') # Provides options for expanding match rows
+source('./R/config_manager.R') # Provides configuration
 
-footr_setup = function() {
-  ip = Sys.getenv("FOOTR_NEO_IP")
-  if (ip == "") {
-    stop('Need to setup FOOTR_NEO_IP in .Renviron before using Footr! If set, try restarting R or checking name.')
-  }
-  
-  password = Sys.getenv("FOOTR_NEO_PASSWORD")
-  if (password == "") {
-    stop('Need to setup FOOTR_NEO_PASSWORD in .Renviron before using Footr! If set, try restarting R or checking name.')
-  }
-  
-  username = 'neo4j'
-  
-  config = list(
-    ip=ip, 
-    password=password, 
-    username=username, 
-    max_active_queries=800 # default is 1000, so give some slack
-  )
+#' Manage config for the footr connection
+#'
+#' @export
+#'
+#' @examples
+#' footr_config.logon('ip', 'password')
+footr_config = FootrConfig$new()
 
-  return(config)
-}
-
-footr_config = footr_setup()
-
-#' Title Get the number of active queries currently running on the DB
+#' Get the number of active queries currently running on the DB
 #'
 #' @return Integer count of the active queries
 #' @export
@@ -37,7 +21,7 @@ get_active_queries = function() {
   return(active_queries[[1]]$row - 1) # -1 as this query is included.
 }
 
-#' Title Execute a cypher (https://neo4j.com/developer/cypher/) query safely.
+#' Execute a cypher (https://neo4j.com/developer/cypher/) query safely.
 #'
 #' @param cypher_query A string of the cypher_query
 #' @param verbose Boolean flag, wether or not verbose output should be provided.
@@ -50,7 +34,7 @@ get_active_queries = function() {
 execute_cypher = function(cypher_query, verbose=FALSE) {
   max_retry = 100
   retry = 0
-  while(get_active_queries() > footr_config$max_active_queries) {
+  while(get_active_queries() > footr_config$get_max_active_queries()) {
     if (retry > max_retry) {
       error_msg = glue::glue('Exceeded max retry for cypher query! Please check DB for potential errors.')
       stop(error_msg)
@@ -69,13 +53,13 @@ neo_query <- function(cypher_query, verbose=FALSE) {
   query_string = glue::glue('{{"statements" : [ {{ "statement" : "{cypher_query}"}} ]}}')
   h = RCurl::basicTextGatherer()
 
-  auth_token = RCurl::base64Encode(glue::glue('{footr_config$username}:{footr_config$password}'))
+  auth_token = RCurl::base64Encode(glue::glue('{footr_config$get_username()}:{footr_config$get_password()}'))
   httpheader <- list(
     'Authorization'=glue::glue('Basic {auth_token}'),
     'Content-Type'='application/json'
   )
 
-  query_url = glue::glue('http://{footr_config$ip}:7474/db/neo4j/tx')
+  query_url = glue::glue('http://{footr_config$get_ip()}:7474/db/neo4j/tx')
   
   RCurl::curlPerform(
     url=query_url,
